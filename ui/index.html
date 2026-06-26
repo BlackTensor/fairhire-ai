@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FairHire AI — Multi-Adversarial Representation Sanitization</title>
+  <meta name="description" content="An AI hiring assistant that scrubs gender and age from its internal representation — and honestly measures where representation scrubbing stops short of true counterfactual fairness." />
+
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230D0F14'/%3E%3Ccircle cx='12' cy='16' r='6' fill='%23A855F7'/%3E%3Ccircle cx='20' cy='16' r='6' fill='%23F59E0B' opacity='0.85'/%3E%3C/svg%3E" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <a class="skip-link" href="#demo">Skip to the live demo</a>
+
+  <header class="hero">
+    <h1>FairHire&nbsp;AI</h1>
+    <p class="kicker">Privacy-Preserving Functional Anonymizer via Adversarial Representation</p>
+    <p class="lede">
+      It scores how suitable a job candidate is while scrubbing gender and age from
+      its internal representation, so those traits can't be recovered from how it decides.
+    </p>
+    <ul class="hero-stats" aria-label="Headline results">
+      <li><span class="stat-num" data-stat="acc"></span><span class="stat-lbl">accuracy retained</span></li>
+      <li><span class="stat-num" data-stat="genleak"></span><span class="stat-lbl">gender leakage removed</span></li>
+      <li><span class="stat-num" data-stat="tpr"></span><span class="stat-lbl">opportunity gap closed</span></li>
+    </ul>
+  </header>
+
+  <main>
+    <!-- LIVE DEMO ------------------------------------------------------- -->
+    <section id="demo" class="demo" aria-labelledby="demo-h">
+      <div class="section-head">
+        <h2 id="demo-h">Score a candidate, live in your browser</h2>
+        <p class="section-sub">
+          Both models run client-side from exported weights &mdash; no server.
+          Compare the unprotected baseline against the sanitized model.
+        </p>
+      </div>
+
+      <div class="demo-grid">
+        <form id="candidate-form" class="panel" aria-label="Candidate attributes">
+          <h3 class="panel-title">Candidate</h3>
+
+          <div class="field">
+            <label for="education_num">Education level</label>
+            <input type="range" id="education_num" min="1" max="16" step="1" value="13" />
+            <output for="education_num" id="education_num_out"></output>
+          </div>
+
+          <div class="field">
+            <label for="hours_per_week">Hours per week</label>
+            <input type="range" id="hours_per_week" min="1" max="99" step="1" value="40" />
+            <output for="hours_per_week" id="hours_per_week_out"></output>
+          </div>
+
+          <div class="field">
+            <label for="capital_gain">Capital gain ($)</label>
+            <input type="number" id="capital_gain" min="0" max="99999" step="100" value="0" />
+          </div>
+
+          <div class="field">
+            <label for="capital_loss">Capital loss ($)</label>
+            <input type="number" id="capital_loss" min="0" max="4356" step="50" value="0" />
+          </div>
+
+          <div class="field">
+            <label for="occupation">Occupation</label>
+            <select id="occupation"></select>
+          </div>
+
+          <div class="field">
+            <label for="workclass">Work class</label>
+            <select id="workclass"></select>
+          </div>
+
+          <div class="field">
+            <label for="marital_status">Marital status</label>
+            <select id="marital_status"></select>
+          </div>
+
+          <div class="field">
+            <label for="native_country">Native country</label>
+            <select id="native_country"></select>
+          </div>
+
+          <p class="form-note">
+            <strong>Household role is deliberately not shown.</strong> In this
+            dataset it is a direct gender proxy (Husband / Wife), which would
+            undercut the whole premise. It is held at its most common value
+            during inference so every candidate is treated identically.
+          </p>
+        </form>
+
+        <div class="panel results" aria-live="polite">
+          <h3 class="panel-title">Predicted suitability</h3>
+          <p class="results-note">Model's estimated probability the candidate is a high-earner (income &gt; $50K), a proxy for suitability.</p>
+
+          <div class="gauge" data-model="baseline">
+            <div class="gauge-head">
+              <span class="gauge-name">Baseline <span class="muted">(no privacy)</span></span>
+              <span class="gauge-val" data-val="baseline">&mdash;</span>
+            </div>
+            <div class="bar"><div class="bar-fill" data-fill="baseline"></div></div>
+          </div>
+
+          <div class="gauge" data-model="sanitized">
+            <div class="gauge-head">
+              <span class="gauge-name">Sanitized <span class="muted">(adversarial)</span></span>
+              <span class="gauge-val" data-val="sanitized">&mdash;</span>
+            </div>
+            <div class="bar"><div class="bar-fill accent" data-fill="sanitized"></div></div>
+          </div>
+
+          <hr class="divider" />
+
+          <h3 class="panel-title">Gender counterfactual</h3>
+          <p class="results-note">
+            Gender is never a model input. We nudge this candidate along the
+            gender-predictive direction in feature space and measure how much the
+            score swings. <strong>Larger swing = more gender-sensitive.</strong>
+          </p>
+          <div class="swing" data-model="baseline">
+            <span class="swing-name">Baseline</span>
+            <span class="swing-val" data-swing="baseline">&mdash;</span>
+          </div>
+          <div class="swing" data-model="sanitized">
+            <span class="swing-name">Sanitized</span>
+            <span class="swing-val coral" data-swing="sanitized">&mdash;</span>
+          </div>
+          <p class="caveat" id="swing-caveat"></p>
+        </div>
+      </div>
+    </section>
+
+    <!-- SIGNATURE LATENT ANIMATION ------------------------------------- -->
+    <section class="latent" aria-labelledby="latent-h">
+      <div class="section-head">
+        <h2 id="latent-h">The signature: watch gender dissolve out of the latent</h2>
+        <p class="section-sub">
+          Each point is a real test candidate, projected (t-SNE) from the model's
+          32-dimensional latent into 2-D and coloured by gender. Before
+          sanitization the colours separate &mdash; gender is decodable. After,
+          they blend &mdash; gender becomes unreadable.
+        </p>
+      </div>
+
+      <div class="latent-stage">
+        <canvas id="latent-canvas" role="img"
+          aria-label="Animated scatter plot of the latent space morphing from gender-separated clusters to a blended cloud."></canvas>
+        <div class="latent-controls">
+          <div class="state-labels">
+            <span class="state-label active" data-state="before">Before</span>
+            <span class="state-label" data-state="after">After</span>
+          </div>
+          <input type="range" id="latent-slider" min="0" max="1000" value="0"
+            step="1" aria-label="Sanitization progress, before to after" />
+          <button id="latent-play" type="button" class="btn">Play</button>
+          <div class="legend">
+            <span class="legend-item"><i class="dot violet"></i><span data-legend="0"></span></span>
+            <span class="legend-item"><i class="dot amber"></i><span data-legend="1"></span></span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- THE PLOTS ------------------------------------------------------- -->
+    <section class="plots" aria-labelledby="plots-h">
+      <div class="section-head">
+        <h2 id="plots-h">The evidence</h2>
+        <p class="section-sub">Test-set results, before vs after sanitization.</p>
+      </div>
+
+      <div class="plot-grid">
+        <figure class="panel chart-card">
+          <figcaption>
+            <h3>The useful signal survives</h3>
+            <p class="muted">Hiring accuracy barely moves.</p>
+          </figcaption>
+          <div class="chart-wrap"><canvas id="chart-accuracy"></canvas></div>
+        </figure>
+
+        <figure class="panel chart-card">
+          <figcaption>
+            <h3>Leakage falls off a cliff</h3>
+            <p class="muted">How much a probe can read each attribute out of the latent (points above chance).</p>
+          </figcaption>
+          <div class="chart-wrap"><canvas id="chart-leakage"></canvas></div>
+        </figure>
+
+        <figure class="panel chart-card">
+          <figcaption>
+            <h3>Decisions even out across gender</h3>
+            <p class="muted">Smaller gaps are fairer (0.5 threshold).</p>
+          </figcaption>
+          <div class="chart-wrap"><canvas id="chart-fairness"></canvas></div>
+        </figure>
+
+        <figure class="panel chart-card">
+          <figcaption>
+            <h3>The honest caveat</h3>
+            <p class="muted">Counterfactual score swing per candidate. The sanitized model swings <em>more</em> &mdash; scrubbing the latent is not the same as a counterfactually invariant score.</p>
+          </figcaption>
+          <div class="chart-wrap"><canvas id="chart-counterfactual"></canvas></div>
+        </figure>
+      </div>
+    </section>
+
+    <!-- METHODS / CAVEAT ----------------------------------------------- -->
+    <section class="methods" aria-labelledby="methods-h">
+      <div class="section-head">
+        <h2 id="methods-h">How it works, and its honest limit</h2>
+      </div>
+      <div class="methods-grid">
+        <div class="panel">
+          <h3>Multi-adversarial sanitization</h3>
+          <p>
+            An encoder maps candidate features to a latent <code>z</code>. A hiring
+            predictor learns from <code>z</code>; simultaneously, gender and age
+            auditors attack <code>z</code> through a Gradient Reversal Layer. The
+            reversed gradient pushes the encoder to make <code>z</code> useless to
+            the auditors while keeping it useful for hiring &mdash; running
+            multiple adversaries at once is the contribution over a textbook
+            single-adversary setup.
+          </p>
+        </div>
+        <div class="panel">
+          <h3>What we will not claim</h3>
+          <p>
+            Adversarial training enforces <em>representational</em> invariance on
+            the data manifold &mdash; gender becomes undecodable from <code>z</code>
+            and group-fairness gaps shrink. It does <em>not</em> guarantee a
+            <em>counterfactually</em> invariant score: perturb a candidate along a
+            gender proxy and the sanitized model actually reacts more, not less. We
+            report this rather than hide it. Closing that gap &mdash; a
+            counterfactual-consistency objective &mdash; is the natural next step.
+          </p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <p class="byline">Built by <span class="author">Shayan Ansari</span> <span class="year">&mdash; 2026</span></p>
+    <p>FairHire AI &mdash; representation-sanitization research demo. UCI Adult Income dataset. Models run entirely in your browser from exported weights.</p>
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

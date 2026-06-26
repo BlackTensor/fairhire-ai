@@ -1,0 +1,33 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.ipynb_checkpoints/
+
+# Virtual environment
+.venv/
+venv/
+
+# Experiment tracking / logs
+wandb/
+logs/
+*.log
+runs/
+
+# Data — keep the folder, ignore large/raw downloads
+data/*
+!data/.gitkeep
+
+# Trained model weights
+models/*
+!models/.gitkeep
+
+# OS / editor cruft
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Final plots are committed so the README can embed them (regenerable with
+# `python -m src.evaluate`). Ignore only scratch/intermediate plot artifacts.
+plots/_*

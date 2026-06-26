@@ -1,0 +1,20 @@
+# FairHire AI — dependencies (all free / open-source)
+# Python 3.14 target. Pins are lower bounds; tested against the versions in comments.
+
+# Core ML
+torch>=2.12            # 2.12.1 has cp314 wheels
+scikit-learn>=1.5
+numpy>=2.1
+pandas>=2.2
+
+# Plots (static, premium dark theme)
+matplotlib>=3.9
+seaborn>=0.13
+
+# Dimensionality reduction for the t-SNE latent plots
+# (bundled in scikit-learn; openTSNE optional for speed)
+
+# Experiment tracking: LOCAL CSV ONLY (decided Phase 0) — no wandb dependency.
+
+# Notebooks
+jupyter>=1.1
